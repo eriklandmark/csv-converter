@@ -10,16 +10,6 @@
                 v-btn(icon v-bind='attrs', @click='errorSnackBar = false')
                     v-icon mdi-close
 
-        v-dialog(v-model="infoDialog" width='300')
-            v-card
-                v-card-title Information
-                v-card-text Version: 1.2.1
-                    br
-                    | Author: Erik Landmark
-                v-card-actions
-                    v-spacer
-                    v-btn(text @click="infoDialog = false") close
-
         v-dialog(v-model="fileExistsDialog")
             v-card
                 v-card-title.red--text File already exists!
@@ -31,8 +21,22 @@
         v-card(flat height="100%" )
             v-card-title CSV Converter
                 v-spacer
-                v-btn(icon @click="infoDialog = true")
-                    v-icon mdi-information
+                v-dialog(v-model="infoDialog" width='300')
+                    template(v-slot:activator='{}')
+                        v-tooltip(bottom)
+                            template(v-slot:activator="{ on, attrs }")
+                                v-btn(v-on="on" v-bind="attr" icon @click="infoDialog = true")
+                                    v-icon mdi-information
+                            span Info
+                    v-card
+                        v-card-title Information
+                        v-card-text Version: 1.2.1
+                            br
+                            | Author: Erik Landmark
+                        v-card-actions
+                            v-spacer
+                            v-btn(text @click="infoDialog = false") close
+
 
             v-divider
             v-card-text.white--text Converts a CSV or TSV file from one delimiter to another.
