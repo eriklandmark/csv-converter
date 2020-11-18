@@ -18,7 +18,7 @@ function createWindow() {
   // Create the browser window.
   win = new BrowserWindow({
     width: 480,
-    height: 480,
+    height: 550,
     resizable: isDevelopment,
     webPreferences: {
       // Use pluginOptions.nodeIntegration, leave this alone
@@ -28,14 +28,13 @@ function createWindow() {
     title: "CSV Converter"
   })
 
-  win.removeMenu()
-
   if (process.env.WEBPACK_DEV_SERVER_URL) {
     // Load the url of the dev server if in development mode
     win.loadURL(process.env.WEBPACK_DEV_SERVER_URL as string)
 
     //if (!process.env.IS_TEST) win.webContents.openDevTools()
   } else {
+    win.removeMenu()
     createProtocol('app')
     // Load the index.html when not in development
     win.loadURL('app://./index.html')
