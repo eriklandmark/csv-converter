@@ -78,7 +78,7 @@ export default class CSVParser {
             return out
         }
 
-        const columns_string = settings.add_quotes? data.columns.map(addQuotes): data.columns.join(settings.delimiter)
+        const columns_string = settings.add_quotes? data.columns.map(addQuotes).join(settings.delimiter): data.columns.join(settings.delimiter)
         const row_string = (<any[]>data.rows).reduce((acc: string, row: any[] | string[]) => {
             let objects: string[] = row
             if (settings.is_columns) {
