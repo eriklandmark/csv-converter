@@ -25,12 +25,12 @@
                     template(v-slot:activator='{}')
                         v-tooltip(bottom)
                             template(v-slot:activator="{ on, attrs }")
-                                v-btn(v-on="on" v-bind="attr" icon @click="infoDialog = true")
+                                v-btn(v-on="on" v-bind="attrs" icon @click="infoDialog = true")
                                     v-icon mdi-information
                             span Info
                     v-card
                         v-card-title Information
-                        v-card-text Version: 1.2.1
+                        v-card-text Version: 1.3.1
                             br
                             | Author: Erik Landmark
                         v-card-actions
@@ -52,7 +52,8 @@
                         v-select(v-model="outputDelimiter" :items="delimiters" label="Output delimiter")
 
                 v-switch(v-model="trimQuotesOnParse" label="- Trim out double quotes on parse? (\")" hide-details )
-                v-switch(v-model="addQuotes" label="- Add double quotes to output file? (\")" )
+                v-switch(v-model="addQuotes" label="- Add double quotes to output file? (\")" hide-details)
+                v-switch(v-model="repair" label="- Try repairing file before parse" )
 
                 v-progress-linear.mt-2.mb-6(v-model="progress")
                 .center
@@ -85,6 +86,7 @@ export default class App extends Vue {
     outputDelimiter: string = ","
     trimQuotesOnParse: boolean = true
     addQuotes: boolean = true
+    repair: boolean = true
 
     csvParser = new CSVParser()
 
@@ -125,7 +127,8 @@ export default class App extends Vue {
                 delimiter: this.inputDelimiter,
                 delete_quotes: this.trimQuotesOnParse,
                 to_columns: true,
-                trim: true
+                trim: true,
+                repair: this.repair
             })
 
             this.progress = 50

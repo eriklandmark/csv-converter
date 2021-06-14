@@ -18,7 +18,7 @@ function createWindow() {
   // Create the browser window.
   win = new BrowserWindow({
     width: 480,
-    height: 550,
+    height: 580,
     resizable: isDevelopment,
     webPreferences: {
       // Use pluginOptions.nodeIntegration, leave this alone

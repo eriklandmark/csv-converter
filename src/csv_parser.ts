@@ -5,6 +5,7 @@ interface CSVParserSettings {
     to_columns?: boolean
     do_checks?: boolean
     trim?: boolean
+    repair?: boolean
 }
 
 interface CSVStringifySettings {
@@ -20,10 +21,38 @@ interface CSVData {
 
 export default class CSVParser {
 
+    repair(data: string, settings: CSVParserSettings = {delimiter: ";"}) {
+        console.log(data)
+    }
+
     parse(data: string, settings: CSVParserSettings = {delimiter: ";"}): CSVData {
         if(settings.do_checks) {
             if (data.indexOf(settings.delimiter) == -1) {
                 throw "Couldn't find specified delimiter."
+            }
+        }
+
+        if (settings.repair && data.indexOf(`"${settings.delimiter}"`) >= 0) {
+            const repeated_del_regex = new RegExp(`("${settings.delimiter}${settings.delimiter}")`, "g")
+            data = data.replace(repeated_del_regex, `"${settings.delimiter}""${settings.delimiter}"`)
+
+            const del_first_regex = new RegExp(`("${settings.delimiter}(?!"))`, "g")
+            const del_last_regex = new RegExp(`((?<!")${settings.delimiter}")`, "g")
+            data = data.replace(del_first_regex, `"${settings.delimiter}"`)
+            data = data.replace(del_last_regex, `"${settings.delimiter}"`)
+
+            console.log(data)
+        }
+
+        if(settings.do_checks) {
+            if (data.indexOf(`"${settings.delimiter}"`) >= 0) {
+                const del_first_regex = new RegExp(`("${settings.delimiter}(?!"))`, "g")
+                const del_last_regex = new RegExp(`((?<!")${settings.delimiter}")`, "g")
+                //@ts-ignore
+                const results = [data.match(del_first_regex), data.match(del_last_regex)].flat().filter(res => res)
+                if (results && results.length) {
+                    throw "Found inconsistent delimiter pairings with quotes! (Try use the repairing option)"
+                }
             }
         }
 
