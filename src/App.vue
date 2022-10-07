@@ -30,9 +30,12 @@
                             span Info
                     v-card
                         v-card-title Information
-                        v-card-text Version: 1.3.1
+                        v-card-text Version: {{app_version}}
                             br
                             | Author: Erik Landmark
+                            br
+                            span Website:
+                                a.ml-1(@click="openLink('https://github.com/eriklandmark/csv-converter/releases')") CSV Converter (Github)
                         v-card-actions
                             v-spacer
                             v-btn(text @click="infoDialog = false") close
@@ -51,9 +54,11 @@
                     .section
                         v-select(v-model="outputDelimiter" :items="delimiters" label="Output delimiter")
 
-                v-switch(v-model="trimQuotesOnParse" label="- Trim out double quotes on parse? (\")" hide-details )
-                v-switch(v-model="addQuotes" label="- Add double quotes to output file? (\")" hide-details)
-                v-switch(v-model="repair" label="- Try repairing file before parse" )
+                .mb-5
+                    v-switch(v-model="trimQuotesOnParse" label="- Trim out double quotes on parse? (\")" hide-details )
+                    v-switch(v-model="addQuotes" label="- Add double quotes to output file? (\")" hide-details)
+                    v-switch(v-model="repair" label="- Try repairing file before parse" hide-details)
+                    v-switch(v-model="addNullData" :label="'Add data to missing columns (' + csvParser.missing_data + ')'" hide-details)
 
                 v-progress-linear.mt-2.mb-6(v-model="progress")
                 .center
@@ -82,15 +87,17 @@ export default class App extends Vue {
     outputName: string = ""
     outputPath: string = ""
     progress: number = 0
-    inputDelimiter: string = ";"
+    inputDelimiter: string = "auto"
     outputDelimiter: string = ","
-    trimQuotesOnParse: boolean = true
+    trimQuotesOnParse: boolean = false
     addQuotes: boolean = true
     repair: boolean = true
+    addNullData: boolean = false
 
     csvParser = new CSVParser()
 
     delimiters: any[] = [
+        {text: "Auto", value: "auto"},
         {text: "Comma ( , )", value: ","},
         {text: "Semicolon ( ; )", value: ";"},
         {text: "Tab ( \\t )", value: "\t"},
@@ -106,6 +113,14 @@ export default class App extends Vue {
         this.outputName = filename.substr(0, filename.indexOf(".")) + "_converted" + filename.substr(filename.indexOf("."))
         paths.pop()
         this.inputPath = paths.join(sep) + sep
+    }
+
+    get app_version() {
+        return require("electron").ipcRenderer.sendSync("get-app-version")
+    }
+
+    openLink(link: string) {
+        require('electron').shell.openExternal(link)
     }
 
     check() {
@@ -128,7 +143,8 @@ export default class App extends Vue {
                 delete_quotes: this.trimQuotesOnParse,
                 to_columns: true,
                 trim: true,
-                repair: this.repair
+                repair: this.repair,
+                add_null_data: this.addNullData
             })
 
             this.progress = 50
@@ -143,10 +159,11 @@ export default class App extends Vue {
             fs.writeFileSync(this.outputPath, converted_data, {encoding: "utf-8"})
             this.progress = 100
             this.showSnackBar = true
+
             setTimeout(() => {
                 this.progress = 0
-            }, 4000)
-        } catch (e) {
+            }, 2000)
+        } catch (e: any) {
             this.errorMsg = e.toString()
             this.errorSnackBar = true
             this.progress = 0

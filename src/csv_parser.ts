@@ -1,4 +1,3 @@
-
 interface CSVParserSettings {
     delimiter: string
     delete_quotes?: boolean
@@ -6,6 +5,7 @@ interface CSVParserSettings {
     do_checks?: boolean
     trim?: boolean
     repair?: boolean
+    add_null_data?: boolean
 }
 
 interface CSVStringifySettings {
@@ -25,29 +25,37 @@ export default class CSVParser {
         console.log(data)
     }
 
+    missing_data = "--"
+
     parse(data: string, settings: CSVParserSettings = {delimiter: ";"}): CSVData {
+        let delimiter = settings.delimiter
+
+        if (delimiter == "auto") {
+            delimiter = this.guess_delimiter(data)
+        }
+
+        console.log("Guessed:",delimiter)
+
         if(settings.do_checks) {
-            if (data.indexOf(settings.delimiter) == -1) {
+            if (data.indexOf(delimiter) == -1) {
                 throw "Couldn't find specified delimiter."
             }
         }
 
-        if (settings.repair && data.indexOf(`"${settings.delimiter}"`) >= 0) {
-            const repeated_del_regex = new RegExp(`("${settings.delimiter}${settings.delimiter}")`, "g")
-            data = data.replace(repeated_del_regex, `"${settings.delimiter}""${settings.delimiter}"`)
+        if (settings.repair && data.indexOf(`"${delimiter}"`) >= 0) {
+            const repeated_del_regex = new RegExp(`("${delimiter}${delimiter}")`, "g")
+            data = data.replace(repeated_del_regex, `"${delimiter}""${delimiter}"`)
 
-            const del_first_regex = new RegExp(`("${settings.delimiter}(?!"))`, "g")
-            const del_last_regex = new RegExp(`((?<!")${settings.delimiter}")`, "g")
-            data = data.replace(del_first_regex, `"${settings.delimiter}"`)
-            data = data.replace(del_last_regex, `"${settings.delimiter}"`)
-
-            console.log(data)
+            const del_first_regex = new RegExp(`("${delimiter}(?!"))`, "g")
+            const del_last_regex = new RegExp(`((?<!")${delimiter}")`, "g")
+            data = data.replace(del_first_regex, `"${delimiter}"`)
+            data = data.replace(del_last_regex, `"${delimiter}"`)
         }
 
         if(settings.do_checks) {
-            if (data.indexOf(`"${settings.delimiter}"`) >= 0) {
-                const del_first_regex = new RegExp(`("${settings.delimiter}(?!"))`, "g")
-                const del_last_regex = new RegExp(`((?<!")${settings.delimiter}")`, "g")
+            if (data.indexOf(`"${delimiter}"`) >= 0) {
+                const del_first_regex = new RegExp(`("${delimiter}(?!"))`, "g")
+                const del_last_regex = new RegExp(`((?<!")${delimiter}")`, "g")
                 //@ts-ignore
                 const results = [data.match(del_first_regex), data.match(del_last_regex)].flat().filter(res => res)
                 if (results && results.length) {
@@ -57,20 +65,20 @@ export default class CSVParser {
         }
 
         const rows = data.trim().split("\n").map((row) => row.trim())
-        const columns: string[] = rows[0].replace(/"/g, "").split(settings.delimiter).map((col) => {
+        const columns: string[] = rows[0].replace(/"/g, "").split(delimiter).map((col) => {
             return settings.delete_quotes? col : `"${col}"`
         })
 
         return {
             columns,
             rows: rows.slice(1).map((row: string, index: number) => {
-                let delimiter = settings.delimiter
+                let parse_delimiter = delimiter
 
-                if (!settings.delete_quotes && row.indexOf(`"${settings.delimiter}"`) > -1) {
-                    delimiter = `"${settings.delimiter}"`
+                if (!settings.delete_quotes && row.indexOf(`"${delimiter}"`) > -1) {
+                    parse_delimiter = `"${delimiter}"`
                 }
 
-                let objects = row.split(delimiter).map((obj: string) => {
+                let objects = row.split(parse_delimiter).map((obj: string) => {
                     obj = settings.trim ? obj.trim() : obj
                     obj = obj.replace(/"/g, "")
                     return settings.delete_quotes? obj : `"${obj}"`
@@ -81,6 +89,20 @@ export default class CSVParser {
                         acc[columns[index]] = obj
                         return acc
                     }, {})
+                }
+
+                if (settings.add_null_data) {
+                    const obj_count = settings.to_columns? Object.keys(objects).length: objects.length
+                    if (obj_count !== columns.length) {
+                        const diff = columns.length - obj_count
+                        for (let i = 0; i < diff; i++) {
+                            if (settings.to_columns) {
+                                (objects as any)[columns[obj_count + i]] = this.missing_data
+                            } else {
+                                objects.push(this.missing_data)
+                            }
+                        }
+                    }
                 }
 
                 if (settings.do_checks) {
@@ -122,5 +144,14 @@ export default class CSVParser {
             return acc
         }, "")
         return columns_string + "\n" + row_string
+    }
+
+    guess_delimiter(data: string): string {
+        const delimiters = [",", ";", "\t", "|"]
+        const delimiters_regex = delimiters.map(del => new RegExp(`([${del}])`, "g"))
+        const counts = delimiters_regex.map(regex => data.match(regex)?.length || 0)
+        const max = Math.max(...counts)
+        const index = counts.indexOf(max)
+        return delimiters[index]
     }
 }
